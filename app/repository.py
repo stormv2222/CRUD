@@ -6,24 +6,28 @@ class Repository:
     def __init__(self, file_path: str):
         self._file_path = file_path
 
-    def _load(self) -> list[dict]:
+    def _load_raw(self) -> dict:
         if not os.path.exists(self._file_path):
-            return []
-        return json_lib.load(self._file_path)
+            return {'next_id': 1, 'records': []}
+        raw = json_lib.load(self._file_path)
+        if not isinstance(raw, dict) or 'records' not in raw:
+            raise ValueError("데이터 파일 형식 오류: 'records' 키를 가진 객체여야 합니다.")
+        if not isinstance(raw['records'], list):
+            raise ValueError("데이터 파일 형식 오류: 'records' 값은 배열이어야 합니다.")
+        return raw
 
-    def _save(self, records: list[dict]) -> None:
-        json_lib.dump(records, self._file_path, indent=2)
+    def _load(self) -> list[dict]:
+        return self._load_raw()['records']
 
-    def _next_id(self, records: list[dict]) -> int:
-        if not records:
-            return 1
-        return max(r['id'] for r in records) + 1
+    def _save(self, raw: dict) -> None:
+        json_lib.dump(raw, self._file_path, indent=2)
 
     def create(self, fields: dict) -> dict:
-        records = self._load()
-        record = {'id': self._next_id(records), **fields}
-        records.append(record)
-        self._save(records)
+        raw = self._load_raw()
+        record = {'id': raw['next_id'], **fields}
+        raw['records'].append(record)
+        raw['next_id'] += 1
+        self._save(raw)
         return record
 
     def read_all(self) -> list[dict]:
@@ -36,11 +40,11 @@ class Repository:
         return None
 
     def update(self, record_id: int, fields: dict) -> dict | None:
-        records = self._load()
-        for record in records:
+        raw = self._load_raw()
+        for record in raw['records']:
             if record['id'] == record_id:
                 record.update(fields)
-                self._save(records)
+                self._save(raw)
                 return record
         return None
 
@@ -48,9 +52,10 @@ class Repository:
         return [r for r in self._load() if str(r.get(key, '')) == value]
 
     def delete(self, record_id: int) -> bool:
-        records = self._load()
-        filtered = [r for r in records if r['id'] != record_id]
-        if len(filtered) == len(records):
+        raw = self._load_raw()
+        filtered = [r for r in raw['records'] if r['id'] != record_id]
+        if len(filtered) == len(raw['records']):
             return False
-        self._save(filtered)
+        raw['records'] = filtered
+        self._save(raw)
         return True

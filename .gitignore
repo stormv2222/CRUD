@@ -7,3 +7,4 @@ data.json
 output.json
 *.egg-info/
 .mcp.json
+tmp/
