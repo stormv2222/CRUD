@@ -1,0 +1,12 @@
+{
+  "title": "JSON POC",
+  "version": 1,
+  "stable": true,
+  "score": 9.5,
+  "tags": ["json", "poc", "python"],
+  "author": {
+    "name": "Alice",
+    "active": true
+  },
+  "note": null
+}
